@@ -1,0 +1,110 @@
+# https://github.com/gfrancesco/cwww-template-light-ha
+
+
+TEMPLATE_LIGHT_NAME:
+  friendly_name:        "TEMPLATE_LIGHT_FRIENDLY_NAME"
+  value_template:       >-
+                        {{ ( state_attr('light.WARM_LIGHT_LINE', 'brightness') | int(0) +
+                             state_attr('light.COLD_LIGHT_LINE', 'brightness') | int(0) ) > 0 }}
+  level_template:       "{{  states('input_number.TEMPLATE_LIGHT_BRIGHTNESS')  | int(0)   }}"
+  temperature_template: "{{  states('input_number.TEMPLATE_LIGHT_TEMPERATURE') | int(500) }}"
+  set_level:
+    - service:     input_number.set_value
+      target:
+        entity_id: input_number.TEMPLATE_LIGHT_BRIGHTNESS
+      data:
+        value:     "{{ brightness | int(0) }}"
+    - if:
+        - condition: numeric_state
+          entity_id: input_number.TEMPLATE_LIGHT_BRIGHTNESS
+          above:     128
+      then:
+        - variables:
+            perc_above_mid: "{{ ((states('input_number.TEMPLATE_LIGHT_BRIGHTNESS') | int(0) - 128) / 127) | float(0) }}"
+        - if:
+            - condition:    numeric_state
+              entity_id:    input_number.TEMPLATE_LIGHT_TEMPERATURE
+              above:        327
+          then:
+            - variables:
+                warmest:          "{{ (500 - (perc_above_mid * 173)) | int(500) }}"
+            - if:
+                - condition:      numeric_state
+                  entity_id:      input_number.TEMPLATE_LIGHT_TEMPERATURE
+                  above:          0
+                  value_template: "{{ (float(state.state) - warmest) | int(0) }}"
+              then:
+                - service:        input_number.set_value
+                  target:
+                    entity_id:    input_number.TEMPLATE_LIGHT_TEMPERATURE
+                  data:
+                    value:        "{{ warmest | int(500) }}"
+        - if:
+            - condition:    numeric_state
+              entity_id:    input_number.TEMPLATE_LIGHT_TEMPERATURE
+              below:        327
+          then:
+            - variables:
+                coldest:          "{{ (153 + (perc_above_mid * 174)) | int(153) }}"
+            - if:
+                - condition:      numeric_state
+                  entity_id:      input_number.TEMPLATE_LIGHT_TEMPERATURE
+                  below:          0
+                  value_template: "{{ (float(state.state) - coldest) | int(0) }}"
+              then:
+                - service:        input_number.set_value
+                  target:
+                    entity_id:    input_number.TEMPLATE_LIGHT_TEMPERATURE
+                  data:
+                    value:        "{{ coldest | int(153) }}"
+    - service:     light.turn_on
+      target:
+        entity_id: light.TEMPLATE_LIGHT_NAME
+  set_temperature:
+    - service:     input_number.set_value
+      target:
+        entity_id: input_number.TEMPLATE_LIGHT_TEMPERATURE
+      data:
+        value:     "{{ color_temp | int(500) }}"
+    - if:
+        - condition: numeric_state
+          entity_id: input_number.TEMPLATE_LIGHT_BRIGHTNESS
+          above:     128
+      then:
+        - variables:
+            delta_perc_mean_temp: "{{ (((( (states('input_number.TEMPLATE_LIGHT_TEMPERATURE') | int(500) - 152) / 348) - 0.5) | abs ) * 2) | float(0) }}"
+            max_brightness:       "{{ ( (1 - delta_perc_mean_temp) * 127 + 128 ) | int(0) }}"
+        - if:
+            - condition:          numeric_state
+              entity_id:          input_number.TEMPLATE_LIGHT_BRIGHTNESS
+              above:              0
+              value_template:     "{{ (float(state.state) - max_brightness) | int(0) }}"
+          then:
+            - service:            input_number.set_value
+              target:
+                entity_id:        input_number.TEMPLATE_LIGHT_BRIGHTNESS
+              data:
+                value:            "{{ max_brightness | int(0) }}"
+    - service:     light.turn_on
+      target:
+        entity_id: light.TEMPLATE_LIGHT_NAME
+  turn_on:
+    - variables:
+        ww_ratio:   "{{ ((   states('input_number.TEMPLATE_LIGHT_TEMPERATURE') | int(500) - 152 ) / 348 ) | float(0) }}"
+    - service:      light.turn_on
+      target:
+        entity_id:  light.WARM_LIGHT_LINE
+      data:
+        brightness: "{{ (2 * states('input_number.TEMPLATE_LIGHT_BRIGHTNESS') | int(0) * ww_ratio)        | int(0) }}"
+    - service:      light.turn_on
+      target:
+        entity_id:  light.COLD_LIGHT_LINE
+      data:
+        brightness: "{{ (2 * states('input_number.TEMPLATE_LIGHT_BRIGHTNESS') | int(0) * (1 - ww_ratio) ) | int(0) }}"
+  turn_off:
+    - service:      light.turn_off
+      target:
+        entity_id:  light.WARM_LIGHT_LINE
+    - service:      light.turn_off
+      target:
+        entity_id:  light.COLD_LIGHT_LINE
