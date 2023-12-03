@@ -65,7 +65,7 @@ TEMPLATE_LIGHT_NAME:
       target:
         entity_id: input_number.TEMPLATE_LIGHT_TEMPERATURE
       data:
-        value:     "{{ color_temp | int(500) }}"
+        value:     "{{ ((153, color_temp, 500) | sort)[1] | int(500) }}"
     - if:
         - condition: numeric_state
           entity_id: input_number.TEMPLATE_LIGHT_BRIGHTNESS
