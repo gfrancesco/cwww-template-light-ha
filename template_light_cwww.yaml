@@ -2,12 +2,12 @@
 
 
 TEMPLATE_LIGHT_NAME:
-  friendly_name:        "TEMPLATE_LIGHT_FRIENDLY_NAME"
-  value_template:       >-
-                        {{ ( state_attr('light.WARM_LIGHT_LINE', 'brightness') | int(0) +
-                             state_attr('light.COLD_LIGHT_LINE', 'brightness') | int(0) ) > 0 }}
-  level_template:       "{{  states('input_number.TEMPLATE_LIGHT_BRIGHTNESS')  | int(0)   }}"
-  temperature_template: "{{  states('input_number.TEMPLATE_LIGHT_TEMPERATURE') | int(500) }}"
+  name:                "TEMPLATE_LIGHT_FRIENDLY_NAME"
+  state:               >-
+                       {{ ( state_attr('light.WARM_LIGHT_LINE', 'brightness') | int(0) +
+                            state_attr('light.COLD_LIGHT_LINE', 'brightness') | int(0) ) > 0 }}
+  level:               "{{  states('input_number.TEMPLATE_LIGHT_BRIGHTNESS')  | int(0)   }}"
+  temperature:         "{{  states('input_number.TEMPLATE_LIGHT_TEMPERATURE') | int(500) }}"
   set_level:
     - service:     input_number.set_value
       target:
